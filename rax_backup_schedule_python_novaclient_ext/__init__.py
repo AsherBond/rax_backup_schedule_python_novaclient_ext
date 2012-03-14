@@ -71,8 +71,7 @@ class BackupScheduleManager(base.Manager):
         :arg server: The server (or its ID).
         :rtype: :class:`BackupSchedule`
         """
-        s = base.getid(server)
-        schedule = self._get('/servers/%s/backup_schedule' % s,
+        schedule = self._get('/servers/%s/backup_schedule' % server.id,
                              'backupSchedule')
         schedule.server = server
         return schedule
@@ -92,11 +91,11 @@ class BackupScheduleManager(base.Manager):
         :arg daily: Run a daily backup at this time
                     (one of the `BACKUP_DAILY_*` constants)
         """
-        s = base.getid(server)
         body = {'backupSchedule': {
             'enabled': enabled, 'weekly': weekly, 'daily': daily
         }}
-        self.api.client.post('/servers/%s/backup_schedule' % s, body=body)
+        self.api.client.post('/servers/%s/backup_schedule' % server.id,
+                             body=body)
 
     update = create
 
@@ -106,21 +105,31 @@ class BackupScheduleManager(base.Manager):
 
         :arg server: The server (or its ID).
         """
-        s = base.getid(server)
-        self._delete('/servers/%s/backup_schedule' % s)
+        self._delete('/servers/%s/backup_schedule' % server.id)
 
 
-@utils.arg('server', metavar='<server>', help='Name or ID of server.')
-@utils.arg('--enable', dest='enabled', default=None, action='store_true',
-                                               help='Enable backups.')
-@utils.arg('--disable', dest='enabled', action='store_false',
-                                  help='Disable backups.')
-@utils.arg('--weekly', metavar='<day>', choices=DAY_CHOICES,
-     help='Schedule a weekly backup for <day> (one of: %s).' %
-                              pretty_choice_list(DAY_CHOICES))
-@utils.arg('--daily', metavar='<time-window>', choices=HOUR_CHOICES,
-     help='Schedule a daily backup during <time-window> (one of: %s).' %
-                                       pretty_choice_list(HOUR_CHOICES))
+@utils.arg('server',
+           metavar='<server>',
+           help='Name or ID of server.')
+@utils.arg('--enable',
+           dest='enabled',
+           default=None,
+           action='store_true',
+           help='Enable backups.')
+@utils.arg('--disable',
+           dest='enabled',
+           action='store_false',
+           help='Disable backups.')
+@utils.arg('--weekly',
+           metavar='<day>',
+           choices=DAY_CHOICES,
+           help='Schedule a weekly backup for <day> (one of: %s).' %
+                pretty_choice_list(DAY_CHOICES))
+@utils.arg('--daily',
+           metavar='<time-window>',
+           choices=HOUR_CHOICES,
+           help='Schedule a daily backup during <time-window> (one of: %s).' %
+                pretty_choice_list(HOUR_CHOICES))
 def do_backup_schedule(cs, args):
     """
     Show or edit the backup schedule for a server.
@@ -128,7 +137,8 @@ def do_backup_schedule(cs, args):
     With no flags, the backup schedule will be shown. If flags are given,
     the backup schedule will be modified accordingly.
     """
-    backup_schedule = cs.rax_backup_schedule_python_novaclient_ext.get(args.server)
+    server = utils.find_resource(cs.servers, args.server)
+    backup_schedule = cs.rax_backup_schedule_python_novaclient_ext.get(server)
     # If we have some flags, update the backup
     backup = {}
     if args.daily:
@@ -143,11 +153,12 @@ def do_backup_schedule(cs, args):
         utils.print_dict(backup_schedule._info)
 
 
-@utils.arg('server', metavar='<server>', help='Name or ID of server.')
+@utils.arg('server',
+           metavar='<server>',
+           help='Name or ID of server.')
 def do_backup_schedule_delete(cs, args):
     """
     Delete the backup schedule for a server.
     """
-    backup_schedule = cs.rax_backup_schedule_python_novaclient_ext.get(
-            args.server)
-    backup_schedule.delete()
+    server = utils.find_resource(cs.servers, args.server)
+    cs.rax_backup_schedule_python_novaclient_ext.get(server).delete()
