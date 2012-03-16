@@ -17,7 +17,7 @@ import setuptools
 
 setuptools.setup(
     name="rax_backup_schedule_python_novaclient_ext",
-    version="0.1.1",
+    version="0.1.2",
     author="Rackspace",
     author_email="rick.harris@rackspace.com",
     url="https://github.com/rackspace/rax_backup_schedule_python_novaclient_ext",

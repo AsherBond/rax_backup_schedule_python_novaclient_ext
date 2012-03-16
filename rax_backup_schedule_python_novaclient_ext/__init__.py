@@ -49,13 +49,14 @@ class BackupSchedule(base.Resource):
         """
         self.manager.delete(server=self.server)
 
-    def update(self, enabled=True, weekly='disabled', daily='disabled'):
+    def update(self, enabled=True, weekly='disabled', daily='disabled',
+               rotation=0):
         """
         Update this backup schedule.
 
         See :meth:`BackupScheduleManager.create` for details.
         """
-        self.manager.create(self.server, enabled, weekly, daily)
+        self.manager.create(self.server, enabled, weekly, daily, rotation)
 
 
 class BackupScheduleManager(base.Manager):
@@ -80,7 +81,8 @@ class BackupScheduleManager(base.Manager):
     # Unlike the rest of the API, POST here returns no body, so we can't use
     # the nice little helper methods.
 
-    def create(self, server, enabled=True, weekly='disabled', daily='disabled'):
+    def create(self, server, enabled=True, weekly='disabled',
+               daily='disabled', rotation=0):
         """
         Create or update the backup schedule for the given server.
 
@@ -91,11 +93,12 @@ class BackupScheduleManager(base.Manager):
         :arg daily: Run a daily backup at this time
                     (one of the `BACKUP_DAILY_*` constants)
         """
-        body = {'backupSchedule': {
-            'enabled': enabled, 'weekly': weekly, 'daily': daily
-        }}
+        backup_schedule = dict(enabled=enabled,
+                               weekly=weekly,
+                               daily=daily,
+                               rotation=rotation)
         self.api.client.post('/servers/%s/backup_schedule' % server.id,
-                             body=body)
+                             body=dict(backupSchedule=backup_schedule))
 
     update = create
 
@@ -130,6 +133,10 @@ class BackupScheduleManager(base.Manager):
            choices=HOUR_CHOICES,
            help='Schedule a daily backup during <time-window> (one of: %s).' %
                 pretty_choice_list(HOUR_CHOICES))
+@utils.arg('--rotation',
+           dest='rotation',
+           action='store',
+           help='Number of extra backups to keep around.')
 def do_backup_schedule(cs, args):
     """
     Show or edit the backup schedule for a server.
@@ -147,6 +154,8 @@ def do_backup_schedule(cs, args):
         backup['weekly'] = args.weekly.upper()
     if args.enabled is not None:
         backup['enabled'] = args.enabled
+    if args.rotation is not None:
+        backup['rotation'] = args.rotation
     if backup:
         backup_schedule.update(**backup)
     else:
